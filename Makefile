@@ -1,13 +1,10 @@
 PYTHON ?= python
 
-.PHONY: install-dev demo module lint typecheck test coverage check
+.PHONY: install-dev module lint typecheck test coverage check
 
 install-dev:
 	$(PYTHON) -m pip install --upgrade pip
 	$(PYTHON) -m pip install -e .[dev]
-
-demo:
-	$(PYTHON) demo.py
 
 module:
 	PYTHONPATH=src $(PYTHON) -m word2vec

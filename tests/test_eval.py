@@ -11,7 +11,7 @@ import numpy as np
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from word2vec.eval import analogy, analogy_accuracy, most_similar, token_coverage, vector_norm_stats
+from word2vec.eval import analogy_accuracy, most_similar, token_coverage
 
 
 class TestEvalUtilities(unittest.TestCase):
@@ -24,33 +24,10 @@ class TestEvalUtilities(unittest.TestCase):
         self.assertEqual(len(results), 2)
         self.assertNotEqual(results[0][0], "a")
 
-    def test_analogy_returns_expected_best_match(self) -> None:
-        token_to_id = {"king": 0, "man": 1, "woman": 2, "queen": 3}
-        id_to_token = {idx: tok for tok, idx in token_to_id.items()}
-        embeddings = np.array(
-            [
-                [2.0, 0.0],   # king
-                [1.0, 0.0],   # man
-                [1.0, 1.0],   # woman
-                [2.0, 1.0],   # queen
-            ],
-            dtype=np.float64,
-        )
-
-        results = analogy("man", "king", "woman", token_to_id, id_to_token, embeddings, top_k=1)
-        self.assertEqual(results[0][0], "queen")
-
     def test_token_coverage(self) -> None:
         token_to_id = {"a": 0, "b": 1}
         coverage = token_coverage(["a", "x", "b", "y"], token_to_id)
         self.assertAlmostEqual(coverage, 0.5)
-
-    def test_vector_norm_stats(self) -> None:
-        embeddings = np.array([[3.0, 4.0], [0.0, 0.0]], dtype=np.float64)
-        stats = vector_norm_stats(embeddings)
-        self.assertAlmostEqual(stats["min"], 0.0)
-        self.assertAlmostEqual(stats["max"], 5.0)
-        self.assertAlmostEqual(stats["mean"], 2.5)
 
     def test_analogy_accuracy(self) -> None:
         token_to_id = {"king": 0, "man": 1, "woman": 2, "queen": 3}

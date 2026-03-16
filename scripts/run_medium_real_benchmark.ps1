@@ -78,3 +78,4 @@ if ($null -ne $proc.ExitCode -and $proc.ExitCode -ne 0) {
 $totalSeconds = [math]::Round($overall.Elapsed.TotalSeconds, 2)
 Write-Host "Completed in ${totalSeconds}s"
 Write-Host "Artifacts: artifacts/benchmark_medium_real.json, artifacts/benchmark_medium_real.md"
+Write-Host "Model: artifacts/models/custom_wikitext2_train_medium.npz"

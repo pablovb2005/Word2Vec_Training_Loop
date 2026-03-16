@@ -82,40 +82,6 @@ def most_similar(
     return results
 
 
-def analogy(
-    a: str,
-    b: str,
-    c: str,
-    token_to_id: Dict[str, int],
-    id_to_token: Dict[int, str],
-    embeddings: np.ndarray,
-    top_k: int = 5,
-) -> List[Tuple[str, float]]:
-    """Solve analogies of the form "a is to b as c is to ?".
-
-    Uses vector arithmetic: target = emb(b) - emb(a) + emb(c), then returns
-    the nearest neighbors by cosine similarity.
-    """
-    for word in (a, b, c):
-        if word not in token_to_id:
-            raise ValueError(f"word '{word}' not in vocabulary")
-    if top_k < 1:
-        raise ValueError("top_k must be >= 1")
-
-    vec_a = embeddings[token_to_id[a]]
-    vec_b = embeddings[token_to_id[b]]
-    vec_c = embeddings[token_to_id[c]]
-    target = vec_b - vec_a + vec_c
-
-    similarities = cosine_similarity_matrix(embeddings, target)
-    similarities[token_to_id[a]] = -np.inf
-    similarities[token_to_id[b]] = -np.inf
-    similarities[token_to_id[c]] = -np.inf
-
-    top_ids = np.argsort(-similarities)[:top_k]
-    return [(id_to_token[idx], float(similarities[idx])) for idx in top_ids]
-
-
 def token_coverage(tokens: Iterable[str], token_to_id: Mapping[str, int]) -> float:
     """Compute vocabulary coverage for an iterable of tokens.
 
@@ -128,16 +94,26 @@ def token_coverage(tokens: Iterable[str], token_to_id: Mapping[str, int]) -> flo
     return hits / len(token_list)
 
 
-def vector_norm_stats(embeddings: np.ndarray) -> Dict[str, float]:
-    """Return descriptive statistics over embedding vector norms."""
-    if embeddings.ndim != 2:
-        raise ValueError("embeddings must be 2D")
-    norms = np.linalg.norm(embeddings, axis=1)
-    return {
-        "min": float(np.min(norms)),
-        "mean": float(np.mean(norms)),
-        "max": float(np.max(norms)),
-    }
+def _analogy_top1(
+    a: str,
+    b: str,
+    c: str,
+    token_to_id: Dict[str, int],
+    id_to_token: Dict[int, str],
+    embeddings: np.ndarray,
+) -> str:
+    """Return the top-1 prediction for analogy a:b::c:?"""
+    vec_a = embeddings[token_to_id[a]]
+    vec_b = embeddings[token_to_id[b]]
+    vec_c = embeddings[token_to_id[c]]
+    target = vec_b - vec_a + vec_c
+
+    similarities = cosine_similarity_matrix(embeddings, target)
+    similarities[token_to_id[a]] = -np.inf
+    similarities[token_to_id[b]] = -np.inf
+    similarities[token_to_id[c]] = -np.inf
+    top_id = int(np.argmax(similarities))
+    return id_to_token[top_id]
 
 
 def analogy_accuracy(
@@ -160,7 +136,7 @@ def analogy_accuracy(
         required = (a, b, c, expected)
         if any(word not in token_to_id for word in required):
             continue
-        prediction = analogy(a, b, c, token_to_id, id_to_token, embeddings, top_k=1)[0][0]
+        prediction = _analogy_top1(a, b, c, token_to_id, id_to_token, embeddings)
         correct += int(prediction == expected)
         evaluated += 1
 
