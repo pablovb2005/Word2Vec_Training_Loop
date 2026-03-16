@@ -120,9 +120,17 @@ PowerShell:
 PYTHONPATH=src python -m word2vec --benchmark-profile tiny-fast --benchmark-repeats 2 --benchmark-json artifacts/benchmark_smoke.json --benchmark-markdown artifacts/benchmark_smoke.md --queries "word,vectors"
 ```
 
+Streaming medium-profile run (for larger datasets):
+
+```bash
+PYTHONPATH=src python -m word2vec --corpus data/your_large_corpus.txt --benchmark-profile medium-memory --stream-pairs --benchmark-repeats 2 --benchmark-json artifacts/benchmark_medium_memory.json --benchmark-markdown artifacts/benchmark_medium_memory.md
+```
+
 Expected outputs:
 - `artifacts/benchmark_smoke.json`
 - `artifacts/benchmark_smoke.md`
+- `artifacts/benchmark_medium_memory.json`
+- `artifacts/benchmark_medium_memory.md`
 
 Expected console summary includes:
 - profile

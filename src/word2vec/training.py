@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from itertools import islice
 from time import perf_counter
-from typing import Iterable, List, Sequence, Tuple
+from typing import Callable, Iterable, List, Sequence, Tuple
 
 import numpy as np
 
@@ -232,11 +233,12 @@ def _clip_gradients(
 
 
 def train(
-    pairs: Iterable[Tuple[int, int]],
+    pairs: Iterable[Tuple[int, int]] | Callable[[], Iterable[Tuple[int, int]]],
     vocab_size: int,
     unigram_distribution: np.ndarray,
     config: TrainingConfig,
     epoch_times_out: List[float] | None = None,
+    epoch_pair_counts_out: List[int] | None = None,
 ) -> Tuple[np.ndarray, np.ndarray, List[float]]:
     """Train skip-gram with negative sampling using SGD.
 
@@ -284,8 +286,22 @@ def train(
     - Loss stuck at high value: seed changes randomness, try different config
     - Slow convergence: check that window_size and num_negatives are adequate
     """
-    pair_list = list(pairs)
-    _validate_training_inputs(pair_list, vocab_size, unigram_distribution, config)
+    pair_iter_factory: Callable[[], Iterable[Tuple[int, int]]]
+    num_pairs_hint: int | None = None
+    if callable(pairs):
+        pair_iter_factory = pairs
+        validation_sample = list(islice(pair_iter_factory(), 1024))
+        _validate_training_inputs(validation_sample, vocab_size, unigram_distribution, config)
+    else:
+        pair_list = list(pairs)
+        _validate_training_inputs(pair_list, vocab_size, unigram_distribution, config)
+        num_pairs_hint = len(pair_list)
+
+        def pair_iter_factory_from_list() -> Iterable[Tuple[int, int]]:
+            return pair_list
+
+        pair_iter_factory = pair_iter_factory_from_list
+
     LOGGER.info(
         "training_start vocab_size=%d embedding_dim=%d num_negatives=%d epochs=%d "
         "learning_rate=%.6f lr_decay=%.6f grad_clip_norm=%s num_pairs=%d",
@@ -296,7 +312,7 @@ def train(
         config.learning_rate,
         config.lr_decay,
         str(config.grad_clip_norm),
-        len(pair_list),
+        num_pairs_hint if num_pairs_hint is not None else -1,
     )
 
     rng = np.random.default_rng(config.seed)
@@ -314,7 +330,8 @@ def train(
         clipping_events = 0
 
         # Iterate over all training pairs in a single pass (one epoch).
-        for center_id, context_id in pair_list:
+        pair_iter = pair_iter_factory()
+        for center_id, context_id in pair_iter:
             # **Step 1: Sample negatives**
             # Exclude the positive context from negatives to avoid conflicting training signals.
             negatives = sample_negatives(
@@ -380,6 +397,8 @@ def train(
         )
         if epoch_times_out is not None:
             epoch_times_out.append(perf_counter() - epoch_start)
+        if epoch_pair_counts_out is not None:
+            epoch_pair_counts_out.append(num_pairs)
 
     LOGGER.info(
         "training_complete epochs=%d final_loss=%.6f",

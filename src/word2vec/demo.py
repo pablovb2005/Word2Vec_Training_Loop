@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Dict, Iterable, List, Tuple
+from typing import Callable, Dict, Iterable, List, Tuple
 
 import numpy as np
 
-from .data import generate_skipgram_pairs, map_tokens_to_ids
+from .data import generate_skipgram_pairs, iter_skipgram_pairs, map_tokens_to_ids
 from .eval import most_similar
 from .io import save_embeddings
 from .preprocessing import build_vocab, tokenize_text
@@ -34,6 +34,7 @@ def run_demo(
     save_artifact_path: Path | None = None,
     benchmark_profile: str = "custom",
     benchmark_metrics_out: Dict[str, float | int | str] | None = None,
+    stream_pairs: bool = False,
 ) -> Tuple[List[float], List[Tuple[str, List[Tuple[str, float]]]]]:
     """Run a minimal training loop and return losses and neighbors.
 
@@ -67,6 +68,9 @@ def run_demo(
         Label for benchmark profile used in this run.
     benchmark_metrics_out:
         Optional mutable dictionary to be populated with benchmark metrics.
+    stream_pairs:
+        If True, generate skip-gram pairs lazily each epoch instead of storing
+        all pairs in memory.
 
     Returns
     -------
@@ -80,12 +84,25 @@ def run_demo(
     token_to_id, id_to_token, _ = build_vocab(tokens, min_count=1)
     token_ids = map_tokens_to_ids(tokens, token_to_id)
 
-    pairs = generate_skipgram_pairs(
-        token_ids,
-        window_size,
-        dynamic_window=dynamic_window,
-        seed=seed,
-    )
+    if stream_pairs:
+        pairs: List[Tuple[int, int]] | Callable[[], Iterable[Tuple[int, int]]]
+
+        def pairs_factory() -> Iterable[Tuple[int, int]]:
+            return iter_skipgram_pairs(
+                token_ids,
+                window_size,
+                dynamic_window=dynamic_window,
+                seed=seed,
+            )
+
+        pairs = pairs_factory
+    else:
+        pairs = generate_skipgram_pairs(
+            token_ids,
+            window_size,
+            dynamic_window=dynamic_window,
+            seed=seed,
+        )
 
     vocab_size = len(token_to_id)
     token_id_counts = np.bincount(token_ids, minlength=vocab_size)
@@ -100,15 +117,17 @@ def run_demo(
     )
 
     epoch_times: List[float] = []
+    epoch_pair_counts: List[int] = []
     input_embeddings, _, epoch_losses = train(
         pairs,
         vocab_size,
         unigram_distribution,
         config,
         epoch_times_out=epoch_times,
+        epoch_pair_counts_out=epoch_pair_counts,
     )
 
-    total_pairs = len(pairs) * epochs
+    total_pairs = int(sum(epoch_pair_counts))
     total_time = float(sum(epoch_times))
     mean_epoch_time = total_time / max(1, len(epoch_times))
     pairs_per_second = total_pairs / max(total_time, 1e-12)
@@ -126,6 +145,7 @@ def run_demo(
                 "mean_epoch_time_seconds": mean_epoch_time,
                 "pairs_per_second": pairs_per_second,
                 "final_loss": float(epoch_losses[-1]) if epoch_losses else float("nan"),
+                "stream_pairs": int(stream_pairs),
             }
         )
 
@@ -154,6 +174,7 @@ def run_demo(
                 "benchmark_profile": benchmark_profile,
                 "total_time_seconds": total_time,
                 "pairs_per_second": pairs_per_second,
+                "stream_pairs": bool(stream_pairs),
             },
         )
 

@@ -101,16 +101,34 @@ Run benchmark profile with summary artifacts:
 PYTHONPATH=src python -m word2vec --benchmark-profile tiny-fast --benchmark-repeats 3 --benchmark-json artifacts/benchmark_tiny_fast.json --benchmark-markdown artifacts/benchmark_tiny_fast.md
 ```
 
+Run a streaming benchmark profile for larger corpora:
+
+```bash
+PYTHONPATH=src python -m word2vec --corpus data/your_large_corpus.txt --benchmark-profile medium-memory --stream-pairs --benchmark-repeats 2 --benchmark-json artifacts/benchmark_medium_memory.json --benchmark-markdown artifacts/benchmark_medium_memory.md
+```
+
 Benchmark helper scripts:
 
 ```bash
 ./scripts/run_benchmarks.sh
 ```
 
+With explicit corpus path for medium profiles:
+
+```bash
+./scripts/run_benchmarks.sh data/your_large_corpus.txt
+```
+
 PowerShell:
 
 ```powershell
 ./scripts/run_benchmarks.ps1
+```
+
+With explicit corpus path for medium profiles:
+
+```powershell
+./scripts/run_benchmarks.ps1 -CorpusPath data/your_large_corpus.txt
 ```
 
 One-command interview demo (artifact + benchmark report):
@@ -220,6 +238,7 @@ docker run --rm numpy-word2vec --epochs 10 --log-level INFO --save-artifact /app
 
 Each benchmark run records:
 - `benchmark_profile`
+- `stream_pairs`
 - `vocab_size`
 - `embedding_dim`
 - `num_negatives`
@@ -228,6 +247,7 @@ Each benchmark run records:
 - `total_time_seconds`
 - `mean_epoch_time_seconds`
 - `pairs_per_second`
+- `peak_memory_mb`
 - `final_loss`
 
 For repeated runs, the CLI also emits summary mean and standard deviation values

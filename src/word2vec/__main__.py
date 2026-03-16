@@ -31,6 +31,22 @@ BENCHMARK_PROFILES: Dict[str, Dict[str, float | int | bool]] = {
         "window_size": 3,
         "dynamic_window": True,
     },
+    "medium-baseline": {
+        "embedding_dim": 64,
+        "num_negatives": 8,
+        "epochs": 8,
+        "window_size": 4,
+        "dynamic_window": True,
+        "stream_pairs": True,
+    },
+    "medium-memory": {
+        "embedding_dim": 48,
+        "num_negatives": 5,
+        "epochs": 6,
+        "window_size": 3,
+        "dynamic_window": True,
+        "stream_pairs": True,
+    },
 }
 
 
@@ -47,10 +63,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--top-k", type=int, default=3)
     parser.add_argument(
+        "--stream-pairs",
+        action="store_true",
+        help="Generate training pairs lazily each epoch to reduce memory usage.",
+    )
+    parser.add_argument(
         "--benchmark-profile",
         type=str,
         default="custom",
-        choices=["custom", "tiny-fast", "tiny-medium"],
+        choices=["custom", "tiny-fast", "tiny-medium", "medium-baseline", "medium-memory"],
         help="Predefined benchmark profile that overrides selected hyperparameters.",
     )
     parser.add_argument(
@@ -134,6 +155,7 @@ def main() -> None:
             save_artifact_path=args.save_artifact,
             benchmark_profile=args.benchmark_profile,
             benchmark_metrics_out=metrics,
+            stream_pairs=args.stream_pairs,
         )
         _, peak_bytes = tracemalloc.get_traced_memory()
         tracemalloc.stop()
