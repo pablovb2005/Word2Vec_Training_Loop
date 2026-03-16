@@ -149,6 +149,27 @@ PowerShell:
 ./scripts/run_interview_demo.ps1
 ```
 
+Medium real benchmark corpus (WikiText-2 train split) with 5-minute cap:
+
+```powershell
+./scripts/run_medium_real_benchmark.ps1 -MaxMinutes 5
+```
+
+Unix-like shell:
+
+```bash
+./scripts/run_medium_real_benchmark.sh 5
+```
+
+This script downloads WikiText-2 training text if missing, runs a streaming
+medium benchmark on a bounded subset (runtime-safe), and writes:
+- `artifacts/benchmark_medium_real.json`
+- `artifacts/benchmark_medium_real.md`
+
+The default runtime-capped preset uses:
+- first 100,000 characters from WikiText-2 train split
+- custom benchmark profile (`embedding_dim=24`, `num_negatives=2`, `window_size=2`, `epochs=1`)
+
 Scripts are also provided in the scripts/ directory:
 
 ```bash

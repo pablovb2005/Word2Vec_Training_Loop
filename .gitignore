@@ -64,3 +64,9 @@ Thumbs.db
 
 # Generated benchmark outputs
 artifacts/
+
+# Downloaded benchmark corpora
+data/benchmarks/
+
+# Local synthetic corpus used for ad-hoc experiments
+data/your_large_corpus.txt
