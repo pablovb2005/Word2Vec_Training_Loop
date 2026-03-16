@@ -1,6 +1,6 @@
 # NumPy Word2Vec Training Loop
 
-A NumPy-only implementation of skip-gram with negative sampling, designed to be clear, reproducible, and interview-ready.
+A NumPy-only implementation of skip-gram with negative sampling, designed to be clear, reproducible, and practical.
 
 ## Quick Start
 

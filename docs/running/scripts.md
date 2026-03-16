@@ -15,8 +15,8 @@ Benchmarking:
 - `scripts/run_medium_real_benchmark.ps1`
 - `scripts/run_long_real_benchmark.sh`
 - `scripts/run_long_real_benchmark.ps1`
-- `scripts/run_interview_demo.sh`
-- `scripts/run_interview_demo.ps1`
+- `scripts/run_full_demo.sh`
+- `scripts/run_full_demo.ps1`
 
 Notes:
 - Scripts for direct demo/module wrappers were removed to reduce duplication.
