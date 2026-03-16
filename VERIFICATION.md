@@ -114,6 +114,23 @@ PowerShell:
 ./scripts/run_checks.ps1
 ```
 
+### Benchmark smoke run
+
+```bash
+PYTHONPATH=src python -m word2vec --benchmark-profile tiny-fast --benchmark-repeats 2 --benchmark-json artifacts/benchmark_smoke.json --benchmark-markdown artifacts/benchmark_smoke.md --queries "word,vectors"
+```
+
+Expected outputs:
+- `artifacts/benchmark_smoke.json`
+- `artifacts/benchmark_smoke.md`
+
+Expected console summary includes:
+- profile
+- run count
+- mean pairs per second
+- mean total time
+- mean final loss
+
 ### Demo with logs + artifact output
 
 ```bash
