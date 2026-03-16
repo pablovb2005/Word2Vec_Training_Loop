@@ -38,6 +38,12 @@ CI now runs:
 Workflow file:
 - .github/workflows/ci.yml
 
+Additional automation now present:
+- .github/workflows/benchmark-smoke.yml
+- .github/workflows/security.yml
+- .github/workflows/release-build.yml
+- .github/dependabot.yml
+
 ### 3. Core Reliability Improvements
 
 Verified in implementation:
@@ -126,11 +132,19 @@ Streaming medium-profile run (for larger datasets):
 PYTHONPATH=src python -m word2vec --corpus data/your_large_corpus.txt --benchmark-profile medium-memory --stream-pairs --benchmark-repeats 2 --benchmark-json artifacts/benchmark_medium_memory.json --benchmark-markdown artifacts/benchmark_medium_memory.md
 ```
 
+Streaming large-profile run (for larger datasets):
+
+```bash
+PYTHONPATH=src python -m word2vec --corpus data/your_large_corpus.txt --benchmark-profile large-stream --benchmark-repeats 2 --benchmark-json artifacts/benchmark_large_stream.json --benchmark-markdown artifacts/benchmark_large_stream.md
+```
+
 Expected outputs:
 - `artifacts/benchmark_smoke.json`
 - `artifacts/benchmark_smoke.md`
 - `artifacts/benchmark_medium_memory.json`
 - `artifacts/benchmark_medium_memory.md`
+- `artifacts/benchmark_large_stream.json`
+- `artifacts/benchmark_large_stream.md`
 
 Expected console summary includes:
 - profile
@@ -139,6 +153,9 @@ Expected console summary includes:
 - mean total time
 - mean peak memory (MB)
 - mean final loss
+
+Benchmark smoke CI additionally validates benchmark artifact shape and uploads
+generated benchmark artifacts for review.
 
 ### One-command interview demo
 
@@ -189,8 +206,8 @@ docker run --rm numpy-word2vec --epochs 10 --log-level INFO --save-artifact /app
 ## Current Risk Register
 
 1. Coverage depth is still below ideal long-term target for a production package.
-2. Metrics and observability are present, but benchmark automation is not yet implemented.
-3. Release automation and security scanning are planned but not yet integrated.
+2. Benchmark smoke CI validates artifact shape, but strict regression thresholds are not yet enforced.
+3. Release workflow currently builds and uploads artifacts in CI only; registry publishing remains optional.
 
 ## Conclusion
 

@@ -107,6 +107,12 @@ Run a streaming benchmark profile for larger corpora:
 PYTHONPATH=src python -m word2vec --corpus data/your_large_corpus.txt --benchmark-profile medium-memory --stream-pairs --benchmark-repeats 2 --benchmark-json artifacts/benchmark_medium_memory.json --benchmark-markdown artifacts/benchmark_medium_memory.md
 ```
 
+Run the larger streaming profile:
+
+```bash
+PYTHONPATH=src python -m word2vec --corpus data/your_large_corpus.txt --benchmark-profile large-stream --benchmark-repeats 2 --benchmark-json artifacts/benchmark_large_stream.json --benchmark-markdown artifacts/benchmark_large_stream.md
+```
+
 Benchmark helper scripts:
 
 ```bash
@@ -248,9 +254,20 @@ Each benchmark run records:
 - `mean_epoch_time_seconds`
 - `pairs_per_second`
 - `peak_memory_mb`
+- `load_corpus_seconds`
+- `tokenize_seconds`
+- `vocab_build_seconds`
+- `pair_prepare_seconds`
+- `build_sampling_distribution_seconds`
+- `train_seconds`
+- `evaluation_seconds`
+- `total_pipeline_seconds`
 - `final_loss`
 
 For repeated runs, the CLI also emits summary mean and standard deviation values
 for timing, throughput, and final loss.
 
 It also includes `peak_memory_mb` per run with mean/stdev in summary outputs.
+
+For scalability experiments, prioritize `large-stream` with `stream_pairs`
+enabled to avoid materializing all skip-gram pairs in memory.
