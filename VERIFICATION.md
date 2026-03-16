@@ -157,6 +157,24 @@ Expected console summary includes:
 Benchmark smoke CI additionally validates benchmark artifact shape and uploads
 generated benchmark artifacts for review.
 
+### Medium real benchmark run (5-minute budget)
+
+PowerShell:
+
+```powershell
+./scripts/run_medium_real_benchmark.ps1 -MaxMinutes 5
+```
+
+Unix-like shell:
+
+```bash
+./scripts/run_medium_real_benchmark.sh 5
+```
+
+Expected outputs:
+- `artifacts/benchmark_medium_real.json`
+- `artifacts/benchmark_medium_real.md`
+
 ### One-command interview demo
 
 ```bash
