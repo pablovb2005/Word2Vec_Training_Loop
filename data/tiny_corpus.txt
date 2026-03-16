@@ -1,0 +1,4 @@
+We learn word vectors from tiny text.
+This tiny corpus is small but useful for testing.
+Word vectors can capture meaning and context.
+We test skip gram with negative sampling.
