@@ -1,6 +1,6 @@
 # Scripts
 
-This is the supported script surface for the final submission.
+This is the supported script surface for the project.
 
 Quality and tests:
 - `scripts/run_checks.sh`

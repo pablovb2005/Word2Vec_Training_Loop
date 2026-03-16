@@ -1,6 +1,6 @@
 # Documentation Hub
 
-This is the canonical documentation for the final project submission.
+This is the canonical documentation for the project.
 
 Start here:
 - [Quickstart](quickstart.md)

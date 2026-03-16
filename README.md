@@ -76,7 +76,7 @@ PowerShell:
 
 ## Project Scope
 
-The final submission keeps a focused execution surface:
+The project keeps a focused execution surface:
 - CLI entry point (`python -m word2vec`)
 - Quality/test scripts
 - Benchmark scripts (including medium/long real corpus runs)
