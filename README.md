@@ -91,6 +91,19 @@ Run with structured training logs and artifact persistence:
 PYTHONPATH=src python -m word2vec --epochs 10 --log-level INFO --save-artifact artifacts/tiny_embeddings.npz
 ```
 
+Model persistence is enabled by default for CLI runs. If `--save-artifact` is
+not provided, the model is saved to:
+
+- `artifacts/models/<benchmark_profile>_<corpus_stem>.npz`
+- `artifacts/models/<benchmark_profile>_<corpus_stem>.json`
+
+Examples with defaults:
+- tiny default run -> `artifacts/models/custom_tiny_corpus.npz`
+- medium real script run -> `artifacts/models/custom_wikitext2_train_medium.npz`
+- long real script run -> `artifacts/models/custom_wikitext103_train_long.npz`
+
+Use `--no-save-artifact` to disable persistence for a single run.
+
 The saved artifact includes:
 - `artifacts/tiny_embeddings.npz`: dense embedding matrix
 - `artifacts/tiny_embeddings.json`: token mapping and training metadata
@@ -165,6 +178,8 @@ This script downloads WikiText-2 training text if missing, runs a streaming
 medium benchmark on a bounded subset (runtime-safe), and writes:
 - `artifacts/benchmark_medium_real.json`
 - `artifacts/benchmark_medium_real.md`
+- `artifacts/models/custom_wikitext2_train_medium.npz`
+- `artifacts/models/custom_wikitext2_train_medium.json`
 
 The default runtime-capped preset uses:
 - first 50,000 characters from WikiText-2 train split
@@ -186,6 +201,8 @@ This script downloads WikiText-103 training text if missing, runs a streaming
 long benchmark on a bounded subset, and writes:
 - `artifacts/benchmark_long_real.json`
 - `artifacts/benchmark_long_real.md`
+- `artifacts/models/custom_wikitext103_train_long.npz`
+- `artifacts/models/custom_wikitext103_train_long.json`
 
 The default long preset uses:
 - first 250,000 characters from WikiText-103 train split
