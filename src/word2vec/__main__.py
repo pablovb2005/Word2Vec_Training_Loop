@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import tracemalloc
 from pathlib import Path
 from typing import Dict, List
 
@@ -118,6 +119,7 @@ def main() -> None:
     neighbors = []
     for run_index in range(args.benchmark_repeats):
         metrics: Dict[str, float | int | str] = {}
+        tracemalloc.start()
         epoch_losses, neighbors = run_demo(
             corpus_path=args.corpus,
             embedding_dim=args.embedding_dim,
@@ -133,6 +135,9 @@ def main() -> None:
             benchmark_profile=args.benchmark_profile,
             benchmark_metrics_out=metrics,
         )
+        _, peak_bytes = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
+        metrics["peak_memory_mb"] = peak_bytes / (1024.0 * 1024.0)
         run_metrics.append(metrics)
 
     summary = summarize_benchmark_runs(run_metrics)
@@ -151,6 +156,7 @@ def main() -> None:
     print(f"  runs: {summary['runs']}")
     print(f"  pairs_per_second_mean: {float(summary['pairs_per_second_mean']):.2f}")
     print(f"  total_time_seconds_mean: {float(summary['total_time_seconds_mean']):.4f}")
+    print(f"  peak_memory_mb_mean: {float(summary['peak_memory_mb_mean']):.2f}")
     print(f"  final_loss_mean: {float(summary['final_loss_mean']):.6f}")
 
     print("\nNearest neighbors:")
