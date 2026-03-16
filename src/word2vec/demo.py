@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Iterable, List, Tuple
+from typing import Dict, Iterable, List, Tuple
 
 import numpy as np
 
@@ -32,6 +32,8 @@ def run_demo(
     query_words: Iterable[str] = ("word", "vectors", "tiny", "context"),
     top_k: int = 3,
     save_artifact_path: Path | None = None,
+    benchmark_profile: str = "custom",
+    benchmark_metrics_out: Dict[str, float | int | str] | None = None,
 ) -> Tuple[List[float], List[Tuple[str, List[Tuple[str, float]]]]]:
     """Run a minimal training loop and return losses and neighbors.
 
@@ -61,6 +63,10 @@ def run_demo(
     save_artifact_path:
         Optional ``.npz`` file path where learned input embeddings are saved,
         with adjacent JSON metadata.
+    benchmark_profile:
+        Label for benchmark profile used in this run.
+    benchmark_metrics_out:
+        Optional mutable dictionary to be populated with benchmark metrics.
 
     Returns
     -------
@@ -93,12 +99,35 @@ def run_demo(
         seed=seed,
     )
 
+    epoch_times: List[float] = []
     input_embeddings, _, epoch_losses = train(
         pairs,
         vocab_size,
         unigram_distribution,
         config,
+        epoch_times_out=epoch_times,
     )
+
+    total_pairs = len(pairs) * epochs
+    total_time = float(sum(epoch_times))
+    mean_epoch_time = total_time / max(1, len(epoch_times))
+    pairs_per_second = total_pairs / max(total_time, 1e-12)
+
+    if benchmark_metrics_out is not None:
+        benchmark_metrics_out.update(
+            {
+                "benchmark_profile": benchmark_profile,
+                "vocab_size": vocab_size,
+                "embedding_dim": embedding_dim,
+                "num_negatives": num_negatives,
+                "epochs": epochs,
+                "total_pairs": total_pairs,
+                "total_time_seconds": total_time,
+                "mean_epoch_time_seconds": mean_epoch_time,
+                "pairs_per_second": pairs_per_second,
+                "final_loss": float(epoch_losses[-1]) if epoch_losses else float("nan"),
+            }
+        )
 
     neighbors = []
     for query in query_words:
@@ -122,6 +151,9 @@ def run_demo(
                 "seed": seed,
                 "vocab_size": vocab_size,
                 "corpus_path": str(corpus_path),
+                "benchmark_profile": benchmark_profile,
+                "total_time_seconds": total_time,
+                "pairs_per_second": pairs_per_second,
             },
         )
 

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from time import perf_counter
 from typing import Iterable, List, Sequence, Tuple
 
 import numpy as np
@@ -235,6 +236,7 @@ def train(
     vocab_size: int,
     unigram_distribution: np.ndarray,
     config: TrainingConfig,
+    epoch_times_out: List[float] | None = None,
 ) -> Tuple[np.ndarray, np.ndarray, List[float]]:
     """Train skip-gram with negative sampling using SGD.
 
@@ -305,6 +307,7 @@ def train(
     epoch_losses: List[float] = []
 
     for epoch in range(config.epochs):
+        epoch_start = perf_counter()
         current_lr = config.learning_rate * (config.lr_decay ** epoch)
         total_loss = 0.0
         num_pairs = 0
@@ -375,6 +378,8 @@ def train(
             num_pairs,
             clipping_events,
         )
+        if epoch_times_out is not None:
+            epoch_times_out.append(perf_counter() - epoch_start)
 
     LOGGER.info(
         "training_complete epochs=%d final_loss=%.6f",
