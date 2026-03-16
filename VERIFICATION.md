@@ -1,90 +1,159 @@
-# Verification Report: NumPy Word2Vec Implementation
+# Verification Report: NumPy Word2Vec System Hardening
 
-## Issues Fixed
+## Scope of Verification
 
-### 1. **Pylance Import Resolution**
-- **Problem**: Pylance reported "Import 'word2vec.data' could not be resolved" for test files
-- **Solution**: Created `pyrightconfig.json` to tell Pylance/Pyright to include the `src` directory in the Python path
-- **File**: [pyrightconfig.json](pyrightconfig.json)
+This report captures the current verification status after moving from a demo-only implementation to a more interview-ready engineering system.
 
-### 2. **Test Import Issues**
-- **Problem**: Tests could not find the `word2vec` module when run via `unittest discover`
-- **Solution**: Updated all test files to use `sys.path.insert(0, ...)` instead of `append()` and fixed path resolution using `.parent.parent` instead of `.parents[1]`
-- **Files**:
-  - [tests/test_preprocessing.py](tests/test_preprocessing.py)
-  - [tests/test_data.py](tests/test_data.py)
-  - [tests/test_sampling.py](tests/test_sampling.py)
-  - [tests/test_model.py](tests/test_model.py)
-  - [tests/test_eval.py](tests/test_eval.py)
+## What Was Verified
 
-### 3. **Test Discovery in Scripts**
-- **Problem**: Test runner scripts weren't properly discovering tests
-- **Solution**: Updated test scripts to use `python -m unittest discover -s tests -p "test_*.py" -v`
-- **Files**: 
-  - [scripts/run_tests.ps1](scripts/run_tests.ps1)
-  - [scripts/run_tests.sh](scripts/run_tests.sh)
+### 1. Quality Gates (Local)
 
-## Verification Results
+The local quality workflow now includes:
+- Linting with Ruff
+- Type checking with Pyright
+- Unit and integration test execution
+- Coverage reporting
 
-### ✅ All 8 Unit Tests Pass
-```
-test_generate_skipgram_pairs_window_1 ................... ok
-test_map_tokens_to_ids_with_unk ......................... ok
-test_most_similar_returns_top_k .......................... ok
-test_forward_loss_and_gradients_shapes .................. ok
-test_build_vocab_min_count_and_unk ....................... ok
-test_tokenize_text_basic ................................ ok
-test_build_unigram_distribution_sums_to_one ............. ok
-test_sample_negatives_respects_banned_ids ............... ok
+Primary commands:
 
-Ran 8 tests in 0.020s - OK
-```
-
-### ✅ Demo Script Works
-- `python demo.py` ✓ Executes successfully
-- Output shows decreasing epoch loss and valid nearest-neighbor results
-- Loss trend: 3.46 → 1.24 over 50 epochs
-
-### ✅ PowerShell Scripts Work
-- `.\scripts\run_demo.ps1` ✓ Runs demo successfully
-- `.\scripts\run_tests.ps1` ✓ Runs all tests successfully
-
-### ✅ Package Installation
-- `pip install -e .` ✓ Installed successfully as editable package
-
-## How to Run
-
-### Run Tests
 ```bash
-python -m unittest discover -s tests -p "test_*.py" -v
-# or
-.\scripts\run_tests.ps1
+python -m ruff check src tests
+python -m pyright
+python -m coverage run -m unittest discover -s tests -p "test_*.py" -v
+python -m coverage report -m
 ```
 
-### Run Demo
+Equivalent script wrappers:
+- scripts/run_checks.sh
+- scripts/run_checks.ps1
+
+### 2. CI Quality Workflow
+
+CI now runs:
+- Ruff lint checks
+- Pyright type checks
+- Full unit test discovery
+- Coverage run + report
+
+Workflow file:
+- .github/workflows/ci.yml
+
+### 3. Core Reliability Improvements
+
+Verified in implementation:
+- Dynamic window RNG optional-path guard in data generation
+- Actionable training input validation messages
+- Structured training lifecycle logging:
+  - training_start
+  - epoch_summary
+  - training_complete
+- Gradient clipping factored into dedicated helper for clarity
+
+Relevant files:
+- src/word2vec/data.py
+- src/word2vec/training.py
+- src/word2vec/__main__.py
+
+### 4. Artifact Persistence
+
+Verified functionality:
+- Save trained embeddings to .npz
+- Save token mapping + run metadata to adjacent .json
+- Load artifacts back into memory for reuse
+
+Relevant files:
+- src/word2vec/io.py
+- src/word2vec/demo.py
+- src/word2vec/__main__.py
+
+### 5. Evaluation Utilities
+
+Verified utilities now include:
+- token_coverage
+- vector_norm_stats
+- analogy_accuracy
+
+Relevant file:
+- src/word2vec/eval.py
+
+### 6. Integration-Level Behavior
+
+Verified with integration coverage:
+- End-to-end run can produce loadable embedding artifacts
+- Save/load roundtrip checks for persistence
+- Gradient clipping behavior checks
+
+Relevant tests:
+- tests/test_integration.py
+- tests/test_io.py
+- tests/test_training.py
+
+## Latest Verification Snapshot
+
+Current validated state from local run:
+- Lint: pass
+- Typecheck: pass
+- Tests: pass (24 discovered tests)
+- Coverage report: generated and passing current configured threshold
+
+Notes:
+- Coverage threshold is currently calibrated for this iteration while implementation is still evolving.
+- Threshold can be raised after the next stabilization pass.
+
+## Reproducible Commands
+
+### Full local gate run
+
 ```bash
-python demo.py
-# or
-.\scripts\run_demo.ps1
+./scripts/run_checks.sh
 ```
 
-### Using Makefile (Unix-like systems)
+PowerShell:
+
+```powershell
+./scripts/run_checks.ps1
+```
+
+### Demo with logs + artifact output
+
 ```bash
-make test
-make demo
+PYTHONPATH=src python -m word2vec --epochs 10 --log-level INFO --save-artifact artifacts/tiny_embeddings.npz
 ```
 
-## Summary
+## Containerized Run Path
 
-All components are now working correctly:
-- ✓ Preprocessing utilities
-- ✓ Data generation (skip-gram pairs)
-- ✓ Negative sampling
-- ✓ Model computations and gradients
-- ✓ Training loop
-- ✓ Evaluation (cosine similarity)
-- ✓ End-to-end demo pipeline
-- ✓ Unit tests
-- ✓ Pylance type checking
+A Docker execution path is now present.
 
-The implementation is ready for production use and interview discussion.
+Build:
+
+```bash
+docker build -t numpy-word2vec .
+```
+
+Run:
+
+```bash
+docker run --rm numpy-word2vec
+```
+
+With explicit arguments:
+
+```bash
+docker run --rm numpy-word2vec --epochs 10 --log-level INFO --save-artifact /app/artifacts/tiny_embeddings.npz
+```
+
+## Current Risk Register
+
+1. Coverage depth is still below ideal long-term target for a production package.
+2. Metrics and observability are present, but benchmark automation is not yet implemented.
+3. Release automation and security scanning are planned but not yet integrated.
+
+## Conclusion
+
+The project now exceeds a simple demo baseline:
+- It has enforceable engineering quality gates.
+- It provides reproducible artifact persistence.
+- It has integration-level verification in addition to unit checks.
+- It supports containerized execution.
+
+This makes it suitable for interview presentation as a small, intentionally engineered ML system rather than only a prototype.

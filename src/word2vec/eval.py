@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, List, Tuple
+from typing import Dict, Iterable, List, Mapping, Sequence, Tuple
 
 import numpy as np
 
@@ -114,3 +114,56 @@ def analogy(
 
     top_ids = np.argsort(-similarities)[:top_k]
     return [(id_to_token[idx], float(similarities[idx])) for idx in top_ids]
+
+
+def token_coverage(tokens: Iterable[str], token_to_id: Mapping[str, int]) -> float:
+    """Compute vocabulary coverage for an iterable of tokens.
+
+    Returns the fraction of tokens present in ``token_to_id``.
+    """
+    token_list = list(tokens)
+    if len(token_list) == 0:
+        return 1.0
+    hits = sum(1 for token in token_list if token in token_to_id)
+    return hits / len(token_list)
+
+
+def vector_norm_stats(embeddings: np.ndarray) -> Dict[str, float]:
+    """Return descriptive statistics over embedding vector norms."""
+    if embeddings.ndim != 2:
+        raise ValueError("embeddings must be 2D")
+    norms = np.linalg.norm(embeddings, axis=1)
+    return {
+        "min": float(np.min(norms)),
+        "mean": float(np.mean(norms)),
+        "max": float(np.max(norms)),
+    }
+
+
+def analogy_accuracy(
+    analogy_set: Sequence[Tuple[str, str, str, str]],
+    token_to_id: Dict[str, int],
+    id_to_token: Dict[int, str],
+    embeddings: np.ndarray,
+) -> float:
+    """Compute top-1 analogy accuracy on labeled analogy tuples.
+
+    Each item should be ``(a, b, c, expected)`` representing
+    "a is to b as c is to expected".
+    """
+    if len(analogy_set) == 0:
+        return 1.0
+
+    correct = 0
+    evaluated = 0
+    for a, b, c, expected in analogy_set:
+        required = (a, b, c, expected)
+        if any(word not in token_to_id for word in required):
+            continue
+        prediction = analogy(a, b, c, token_to_id, id_to_token, embeddings, top_k=1)[0][0]
+        correct += int(prediction == expected)
+        evaluated += 1
+
+    if evaluated == 0:
+        return 0.0
+    return correct / evaluated

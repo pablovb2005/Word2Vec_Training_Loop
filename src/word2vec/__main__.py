@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from pathlib import Path
 
 from .demo import run_demo
@@ -21,6 +22,19 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--top-k", type=int, default=3)
     parser.add_argument(
+        "--save-artifact",
+        type=Path,
+        default=None,
+        help="Optional .npz path to save learned embeddings and metadata.",
+    )
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="WARNING",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level for training diagnostics.",
+    )
+    parser.add_argument(
         "--queries",
         type=str,
         default="word,vectors,tiny,context",
@@ -32,6 +46,10 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> None:
     """Run demo training with CLI arguments and print summary outputs."""
     args = build_parser().parse_args()
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     queries = [q.strip() for q in args.queries.split(",") if q.strip()]
 
     epoch_losses, neighbors = run_demo(
@@ -45,6 +63,7 @@ def main() -> None:
         seed=args.seed,
         query_words=queries,
         top_k=args.top_k,
+        save_artifact_path=args.save_artifact,
     )
 
     print("Epoch losses:")

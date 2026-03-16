@@ -3,15 +3,15 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 import unittest
+from pathlib import Path
 
 import numpy as np
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-from word2vec.training import TrainingConfig, train
+from word2vec.training import TrainingConfig, _clip_gradients, train
 
 
 class TestTrainingUtilities(unittest.TestCase):
@@ -32,6 +32,30 @@ class TestTrainingUtilities(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             train(pairs, vocab_size=2, unigram_distribution=distribution, config=config)
+
+    def test_clip_gradients_enforces_threshold(self) -> None:
+        grad_center = np.array([3.0, 4.0], dtype=np.float64)
+        grad_pos = np.array([6.0, 8.0], dtype=np.float64)
+        grad_neg = np.array([[0.0, 5.0]], dtype=np.float64)
+
+        events = _clip_gradients(grad_center, grad_pos, grad_neg, clip_norm=2.0)
+
+        total_sq = float(np.sum(grad_center**2) + np.sum(grad_pos**2) + np.sum(grad_neg**2))
+        self.assertEqual(events, 1)
+        self.assertLessEqual(np.sqrt(total_sq), 2.0 + 1e-9)
+
+    def test_clip_gradients_noop_when_disabled(self) -> None:
+        grad_center = np.array([1.0, 2.0], dtype=np.float64)
+        grad_pos = np.array([3.0, 4.0], dtype=np.float64)
+        grad_neg = np.array([[5.0, 6.0]], dtype=np.float64)
+
+        before = (grad_center.copy(), grad_pos.copy(), grad_neg.copy())
+        events = _clip_gradients(grad_center, grad_pos, grad_neg, clip_norm=None)
+
+        self.assertEqual(events, 0)
+        np.testing.assert_allclose(grad_center, before[0])
+        np.testing.assert_allclose(grad_pos, before[1])
+        np.testing.assert_allclose(grad_neg, before[2])
 
 
 if __name__ == "__main__":

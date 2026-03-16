@@ -9,6 +9,7 @@ import numpy as np
 
 from .data import generate_skipgram_pairs, map_tokens_to_ids
 from .eval import most_similar
+from .io import save_embeddings
 from .preprocessing import build_vocab, tokenize_text
 from .sampling import build_unigram_distribution
 from .training import TrainingConfig, train
@@ -30,6 +31,7 @@ def run_demo(
     seed: int = 7,
     query_words: Iterable[str] = ("word", "vectors", "tiny", "context"),
     top_k: int = 3,
+    save_artifact_path: Path | None = None,
 ) -> Tuple[List[float], List[Tuple[str, List[Tuple[str, float]]]]]:
     """Run a minimal training loop and return losses and neighbors.
 
@@ -56,6 +58,9 @@ def run_demo(
         Iterable of words to query after training.
     top_k:
         Number of nearest neighbors to return per query.
+    save_artifact_path:
+        Optional ``.npz`` file path where learned input embeddings are saved,
+        with adjacent JSON metadata.
 
     Returns
     -------
@@ -101,5 +106,23 @@ def run_demo(
             continue
         results = most_similar(query, token_to_id, id_to_token, input_embeddings, top_k)
         neighbors.append((query, results))
+
+    if save_artifact_path is not None:
+        save_embeddings(
+            output_path=save_artifact_path,
+            embeddings=input_embeddings,
+            token_to_id=token_to_id,
+            metadata={
+                "embedding_dim": embedding_dim,
+                "window_size": window_size,
+                "dynamic_window": dynamic_window,
+                "num_negatives": num_negatives,
+                "learning_rate": learning_rate,
+                "epochs": epochs,
+                "seed": seed,
+                "vocab_size": vocab_size,
+                "corpus_path": str(corpus_path),
+            },
+        )
 
     return epoch_losses, neighbors

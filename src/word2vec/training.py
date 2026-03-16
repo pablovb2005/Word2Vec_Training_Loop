@@ -6,6 +6,7 @@ Focus on clarity, correctness, and numerical stability throughout.
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass
 from typing import Iterable, List, Sequence, Tuple
 
@@ -13,6 +14,8 @@ import numpy as np
 
 from .model import forward_loss_and_gradients
 from .sampling import sample_negatives
+
+LOGGER = logging.getLogger(__name__)
 
 
 @dataclass
@@ -165,35 +168,66 @@ def _validate_training_inputs(
 ) -> None:
     """Validate training inputs before entering the optimization loop."""
     if vocab_size <= 0:
-        raise ValueError("vocab_size must be > 0")
+        raise ValueError(f"vocab_size must be > 0, got {vocab_size}")
     if config.embedding_dim <= 0:
-        raise ValueError("embedding_dim must be > 0")
+        raise ValueError(f"embedding_dim must be > 0, got {config.embedding_dim}")
     if config.num_negatives <= 0:
-        raise ValueError("num_negatives must be > 0")
+        raise ValueError(f"num_negatives must be > 0, got {config.num_negatives}")
     if config.learning_rate <= 0.0:
-        raise ValueError("learning_rate must be > 0")
+        raise ValueError(f"learning_rate must be > 0, got {config.learning_rate}")
     if config.epochs <= 0:
-        raise ValueError("epochs must be > 0")
+        raise ValueError(f"epochs must be > 0, got {config.epochs}")
     if config.lr_decay <= 0.0:
-        raise ValueError("lr_decay must be > 0")
+        raise ValueError(f"lr_decay must be > 0, got {config.lr_decay}")
     if config.grad_clip_norm is not None and config.grad_clip_norm <= 0.0:
-        raise ValueError("grad_clip_norm must be > 0 when provided")
+        raise ValueError(f"grad_clip_norm must be > 0 when provided, got {config.grad_clip_norm}")
     if unigram_distribution.ndim != 1:
-        raise ValueError("unigram_distribution must be 1D")
+        raise ValueError(
+            f"unigram_distribution must be 1D, got shape {unigram_distribution.shape}"
+        )
     if unigram_distribution.shape[0] != vocab_size:
-        raise ValueError("unigram_distribution size must equal vocab_size")
+        raise ValueError(
+            "unigram_distribution size must equal vocab_size: "
+            f"len={unigram_distribution.shape[0]}, vocab_size={vocab_size}"
+        )
     if np.any(unigram_distribution < 0.0):
         raise ValueError("unigram_distribution must be non-negative")
 
     prob_sum = float(unigram_distribution.sum())
     if not np.isfinite(prob_sum) or abs(prob_sum - 1.0) > 1e-6:
-        raise ValueError("unigram_distribution must sum to 1.0")
+        raise ValueError(f"unigram_distribution must sum to 1.0, got {prob_sum}")
 
-    for center_id, context_id in pair_list:
+    for pair_index, (center_id, context_id) in enumerate(pair_list):
         if not (0 <= center_id < vocab_size):
-            raise ValueError("center_id out of range")
+            raise ValueError(
+                f"center_id={center_id} out of range [0, {vocab_size}) at pair index {pair_index}"
+            )
         if not (0 <= context_id < vocab_size):
-            raise ValueError("context_id out of range")
+            raise ValueError(
+                f"context_id={context_id} out of range [0, {vocab_size}) at pair index {pair_index}"
+            )
+
+
+def _clip_gradients(
+    grad_center: np.ndarray,
+    grad_pos: np.ndarray,
+    grad_neg: np.ndarray,
+    clip_norm: float | None,
+) -> int:
+    """Clip combined gradient norm in-place and return clip event count (0 or 1)."""
+    if clip_norm is None:
+        return 0
+
+    sq_sum = float(np.sum(grad_center**2) + np.sum(grad_pos**2) + np.sum(grad_neg**2))
+    global_norm = np.sqrt(sq_sum)
+    if global_norm <= clip_norm:
+        return 0
+
+    scale = clip_norm / (global_norm + 1e-12)
+    grad_center *= scale
+    grad_pos *= scale
+    grad_neg *= scale
+    return 1
 
 
 def train(
@@ -250,6 +284,18 @@ def train(
     """
     pair_list = list(pairs)
     _validate_training_inputs(pair_list, vocab_size, unigram_distribution, config)
+    LOGGER.info(
+        "training_start vocab_size=%d embedding_dim=%d num_negatives=%d epochs=%d "
+        "learning_rate=%.6f lr_decay=%.6f grad_clip_norm=%s num_pairs=%d",
+        vocab_size,
+        config.embedding_dim,
+        config.num_negatives,
+        config.epochs,
+        config.learning_rate,
+        config.lr_decay,
+        str(config.grad_clip_norm),
+        len(pair_list),
+    )
 
     rng = np.random.default_rng(config.seed)
     input_embeddings, output_embeddings = initialize_embeddings(
@@ -262,6 +308,7 @@ def train(
         current_lr = config.learning_rate * (config.lr_decay ** epoch)
         total_loss = 0.0
         num_pairs = 0
+        clipping_events = 0
 
         # Iterate over all training pairs in a single pass (one epoch).
         for center_id, context_id in pair_list:
@@ -287,14 +334,12 @@ def train(
             if not np.isfinite(loss):
                 raise FloatingPointError("loss became non-finite")
 
-            if config.grad_clip_norm is not None:
-                sq_sum = float(np.sum(grad_center**2) + np.sum(grad_pos**2) + np.sum(grad_neg**2))
-                global_norm = np.sqrt(sq_sum)
-                if global_norm > config.grad_clip_norm:
-                    scale = config.grad_clip_norm / (global_norm + 1e-12)
-                    grad_center *= scale
-                    grad_pos *= scale
-                    grad_neg *= scale
+            clipping_events += _clip_gradients(
+                grad_center,
+                grad_pos,
+                grad_neg,
+                config.grad_clip_norm,
+            )
 
             # **Step 3: Parameter updates via SGD**
             # All involved parameters move in the negative gradient direction.
@@ -322,5 +367,19 @@ def train(
         if not np.isfinite(avg_loss):
             raise FloatingPointError("average loss became non-finite")
         epoch_losses.append(avg_loss)
+        LOGGER.info(
+            "epoch_summary epoch=%d avg_loss=%.6f learning_rate=%.6f pairs=%d clipping_events=%d",
+            epoch + 1,
+            avg_loss,
+            current_lr,
+            num_pairs,
+            clipping_events,
+        )
+
+    LOGGER.info(
+        "training_complete epochs=%d final_loss=%.6f",
+        config.epochs,
+        epoch_losses[-1] if epoch_losses else float("nan"),
+    )
 
     return input_embeddings, output_embeddings, epoch_losses

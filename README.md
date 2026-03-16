@@ -85,6 +85,16 @@ This command supports CLI options, for example:
 PYTHONPATH=src python -m word2vec --epochs 10 --window-size 3 --dynamic-window --queries "word,tiny"
 ```
 
+Run with structured training logs and artifact persistence:
+
+```bash
+PYTHONPATH=src python -m word2vec --epochs 10 --log-level INFO --save-artifact artifacts/tiny_embeddings.npz
+```
+
+The saved artifact includes:
+- `artifacts/tiny_embeddings.npz`: dense embedding matrix
+- `artifacts/tiny_embeddings.json`: token mapping and training metadata
+
 Scripts are also provided in the scripts/ directory:
 
 ```bash
@@ -124,4 +134,54 @@ PowerShell:
 
 ```powershell
 ./scripts/run_tests.ps1
+```
+
+## Quality Gates
+
+Install development tools:
+
+```bash
+python -m pip install -e .[dev]
+```
+
+Run the full local gate suite (lint, type check, tests, coverage):
+
+```bash
+./scripts/run_checks.sh
+```
+
+PowerShell:
+
+```powershell
+./scripts/run_checks.ps1
+```
+
+Equivalent Makefile targets:
+
+```bash
+make lint
+make typecheck
+make test
+make coverage
+make check
+```
+
+## Docker
+
+Build the container image:
+
+```bash
+docker build -t numpy-word2vec .
+```
+
+Run with default command:
+
+```bash
+docker run --rm numpy-word2vec
+```
+
+Run with custom arguments:
+
+```bash
+docker run --rm numpy-word2vec --epochs 10 --log-level INFO --save-artifact /app/artifacts/tiny_embeddings.npz
 ```

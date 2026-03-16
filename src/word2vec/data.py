@@ -84,7 +84,7 @@ def generate_skipgram_pairs(
     if window_size < 1:
         raise ValueError("window_size must be >= 1")
 
-    rng = np.random.default_rng(seed) if dynamic_window else None
+    rng: np.random.Generator | None = np.random.default_rng(seed) if dynamic_window else None
 
     pairs: List[Tuple[int, int]] = []
     n_tokens = len(token_ids)
@@ -92,6 +92,8 @@ def generate_skipgram_pairs(
     for center_index in range(n_tokens):
         center_id = token_ids[center_index]
         if dynamic_window:
+            if rng is None:
+                raise RuntimeError("rng was not initialized for dynamic_window mode")
             effective_window = int(rng.integers(1, window_size + 1))
         else:
             effective_window = window_size

@@ -10,8 +10,34 @@ readme = "README.md"
 requires-python = ">=3.9"
 dependencies = ["numpy"]
 
+[project.optional-dependencies]
+dev = [
+	"coverage>=7.6.0",
+	"pyright>=1.1.395",
+	"ruff>=0.11.0",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["E402", "E501"]
+
+[tool.coverage.run]
+source = ["src/word2vec"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 60
