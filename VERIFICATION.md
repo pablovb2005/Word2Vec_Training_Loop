@@ -175,6 +175,24 @@ Expected outputs:
 - `artifacts/benchmark_medium_real.json`
 - `artifacts/benchmark_medium_real.md`
 
+### Long real benchmark run (explicit timeout budget)
+
+PowerShell:
+
+```powershell
+./scripts/run_long_real_benchmark.ps1 -MaxMinutes 15
+```
+
+Unix-like shell:
+
+```bash
+./scripts/run_long_real_benchmark.sh 15
+```
+
+Expected outputs:
+- `artifacts/benchmark_long_real.json`
+- `artifacts/benchmark_long_real.md`
+
 ### One-command interview demo
 
 ```bash

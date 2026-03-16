@@ -167,8 +167,29 @@ medium benchmark on a bounded subset (runtime-safe), and writes:
 - `artifacts/benchmark_medium_real.md`
 
 The default runtime-capped preset uses:
-- first 100,000 characters from WikiText-2 train split
+- first 50,000 characters from WikiText-2 train split
 - custom benchmark profile (`embedding_dim=24`, `num_negatives=2`, `window_size=2`, `epochs=1`)
+
+Long real benchmark corpus (WikiText-103 train split) with explicit timeout cap:
+
+```powershell
+./scripts/run_long_real_benchmark.ps1 -MaxMinutes 15
+```
+
+Unix-like shell:
+
+```bash
+./scripts/run_long_real_benchmark.sh 15
+```
+
+This script downloads WikiText-103 training text if missing, runs a streaming
+long benchmark on a bounded subset, and writes:
+- `artifacts/benchmark_long_real.json`
+- `artifacts/benchmark_long_real.md`
+
+The default long preset uses:
+- first 250,000 characters from WikiText-103 train split
+- custom benchmark profile (`embedding_dim=32`, `num_negatives=3`, `window_size=3`, `epochs=1`)
 
 Scripts are also provided in the scripts/ directory:
 
