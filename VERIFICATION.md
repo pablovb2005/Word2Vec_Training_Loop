@@ -129,7 +129,26 @@ Expected console summary includes:
 - run count
 - mean pairs per second
 - mean total time
+- mean peak memory (MB)
 - mean final loss
+
+### One-command interview demo
+
+```bash
+./scripts/run_interview_demo.sh
+```
+
+PowerShell:
+
+```powershell
+./scripts/run_interview_demo.ps1
+```
+
+Expected outputs:
+- `artifacts/interview_embeddings.npz`
+- `artifacts/interview_embeddings.json`
+- `artifacts/interview_benchmark.json`
+- `artifacts/interview_benchmark.md`
 
 ### Demo with logs + artifact output
 

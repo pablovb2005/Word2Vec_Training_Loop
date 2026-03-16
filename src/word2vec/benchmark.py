@@ -20,6 +20,7 @@ def summarize_benchmark_runs(
         "mean_epoch_time_seconds",
         "pairs_per_second",
         "final_loss",
+        "peak_memory_mb",
     ]
     summary: Dict[str, float | int | str] = {
         "runs": len(runs),
@@ -66,6 +67,8 @@ def write_benchmark_markdown(path: Path, summary: Mapping[str, float | int | str
         "mean_epoch_time_seconds_stdev",
         "pairs_per_second_mean",
         "pairs_per_second_stdev",
+        "peak_memory_mb_mean",
+        "peak_memory_mb_stdev",
         "final_loss_mean",
         "final_loss_stdev",
     ]

@@ -113,6 +113,18 @@ PowerShell:
 ./scripts/run_benchmarks.ps1
 ```
 
+One-command interview demo (artifact + benchmark report):
+
+```bash
+./scripts/run_interview_demo.sh
+```
+
+PowerShell:
+
+```powershell
+./scripts/run_interview_demo.ps1
+```
+
 Scripts are also provided in the scripts/ directory:
 
 ```bash
@@ -220,3 +232,5 @@ Each benchmark run records:
 
 For repeated runs, the CLI also emits summary mean and standard deviation values
 for timing, throughput, and final loss.
+
+It also includes `peak_memory_mb` per run with mean/stdev in summary outputs.
