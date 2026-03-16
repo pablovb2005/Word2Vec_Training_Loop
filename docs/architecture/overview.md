@@ -10,7 +10,7 @@ Core modules:
 - `training.py`: SGD training loop
 - `eval.py`: nearest-neighbor retrieval and evaluation helpers
 - `io.py`: save/load model artifacts
-- `demo.py`: end-to-end training pipeline
+- `src/word2vec/demo.py`: end-to-end training pipeline
 - `__main__.py`: CLI entry point
 
 Design goals:

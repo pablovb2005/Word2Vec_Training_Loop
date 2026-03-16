@@ -19,7 +19,7 @@ Benchmarking:
 - `scripts/run_full_demo.ps1`
 
 Notes:
-- Scripts for direct demo/module wrappers were removed to reduce duplication.
+- Redundant root demo wrappers were removed to reduce duplication.
 - Use CLI directly for one-off runs: `PYTHONPATH=src python -m word2vec ...`.
 
 Related pages:

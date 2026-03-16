@@ -8,7 +8,6 @@ WORKDIR /app
 COPY pyproject.toml README.md ./
 COPY src ./src
 COPY data ./data
-COPY demo.py ./
 
 RUN python -m pip install --upgrade pip \
     && pip install -e .
