@@ -6,7 +6,7 @@ for the skip-gram objective with deterministic behavior.
 
 from __future__ import annotations
 
-from typing import Dict, Iterable, List, Sequence, Tuple
+from typing import Dict, Iterable, Iterator, List, Sequence, Tuple
 
 import numpy as np
 
@@ -81,12 +81,31 @@ def generate_skipgram_pairs(
     - ("sat", "cat")
     Total: 2*window_size*(n_tokens - 1) pairs in ideal case, fewer at boundaries.
     """
+    return list(
+        iter_skipgram_pairs(
+            token_ids,
+            window_size,
+            dynamic_window=dynamic_window,
+            seed=seed,
+        )
+    )
+
+
+def iter_skipgram_pairs(
+    token_ids: Sequence[int],
+    window_size: int,
+    dynamic_window: bool = False,
+    seed: int | None = None,
+) -> Iterator[Tuple[int, int]]:
+    """Yield skip-gram pairs lazily for memory-efficient training.
+
+    This iterator is useful for larger corpora where materializing all pairs in
+    memory is expensive.
+    """
     if window_size < 1:
         raise ValueError("window_size must be >= 1")
 
     rng: np.random.Generator | None = np.random.default_rng(seed) if dynamic_window else None
-
-    pairs: List[Tuple[int, int]] = []
     n_tokens = len(token_ids)
 
     for center_index in range(n_tokens):
@@ -105,6 +124,4 @@ def generate_skipgram_pairs(
             if context_index == center_index:
                 continue
             context_id = token_ids[context_index]
-            pairs.append((center_id, context_id))
-
-    return pairs
+            yield (center_id, context_id)
