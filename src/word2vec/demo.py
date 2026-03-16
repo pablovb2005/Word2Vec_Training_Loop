@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from time import perf_counter
 from typing import Callable, Dict, Iterable, List, Tuple
 
 import numpy as np
@@ -78,12 +79,22 @@ def run_demo(
         (epoch_losses, neighbors) where neighbors is a list of
         (query_word, [(token, score), ...]).
     """
-    raw_text = load_corpus(corpus_path)
-    tokens = tokenize_text(raw_text)
+    pipeline_start = perf_counter()
 
+    load_start = perf_counter()
+    raw_text = load_corpus(corpus_path)
+    load_corpus_seconds = perf_counter() - load_start
+
+    tokenize_start = perf_counter()
+    tokens = tokenize_text(raw_text)
+    tokenize_seconds = perf_counter() - tokenize_start
+
+    vocab_start = perf_counter()
     token_to_id, id_to_token, _ = build_vocab(tokens, min_count=1)
     token_ids = map_tokens_to_ids(tokens, token_to_id)
+    vocab_build_seconds = perf_counter() - vocab_start
 
+    pair_prepare_start = perf_counter()
     if stream_pairs:
         pairs: List[Tuple[int, int]] | Callable[[], Iterable[Tuple[int, int]]]
 
@@ -103,10 +114,13 @@ def run_demo(
             dynamic_window=dynamic_window,
             seed=seed,
         )
+    pair_prepare_seconds = perf_counter() - pair_prepare_start
 
     vocab_size = len(token_to_id)
+    sampling_start = perf_counter()
     token_id_counts = np.bincount(token_ids, minlength=vocab_size)
     unigram_distribution = build_unigram_distribution(token_id_counts, power=0.75)
+    build_sampling_distribution_seconds = perf_counter() - sampling_start
 
     config = TrainingConfig(
         embedding_dim=embedding_dim,
@@ -118,6 +132,7 @@ def run_demo(
 
     epoch_times: List[float] = []
     epoch_pair_counts: List[int] = []
+    train_start = perf_counter()
     input_embeddings, _, epoch_losses = train(
         pairs,
         vocab_size,
@@ -126,6 +141,7 @@ def run_demo(
         epoch_times_out=epoch_times,
         epoch_pair_counts_out=epoch_pair_counts,
     )
+    train_seconds = perf_counter() - train_start
 
     total_pairs = int(sum(epoch_pair_counts))
     total_time = float(sum(epoch_times))
@@ -150,11 +166,15 @@ def run_demo(
         )
 
     neighbors = []
+    eval_start = perf_counter()
     for query in query_words:
         if query not in token_to_id:
             continue
         results = most_similar(query, token_to_id, id_to_token, input_embeddings, top_k)
         neighbors.append((query, results))
+    evaluation_seconds = perf_counter() - eval_start
+
+    total_pipeline_seconds = perf_counter() - pipeline_start
 
     if save_artifact_path is not None:
         save_embeddings(
@@ -175,7 +195,29 @@ def run_demo(
                 "total_time_seconds": total_time,
                 "pairs_per_second": pairs_per_second,
                 "stream_pairs": bool(stream_pairs),
+                "load_corpus_seconds": load_corpus_seconds,
+                "tokenize_seconds": tokenize_seconds,
+                "vocab_build_seconds": vocab_build_seconds,
+                "pair_prepare_seconds": pair_prepare_seconds,
+                "build_sampling_distribution_seconds": build_sampling_distribution_seconds,
+                "train_seconds": train_seconds,
+                "evaluation_seconds": evaluation_seconds,
+                "total_pipeline_seconds": total_pipeline_seconds,
             },
+        )
+
+    if benchmark_metrics_out is not None:
+        benchmark_metrics_out.update(
+            {
+                "load_corpus_seconds": load_corpus_seconds,
+                "tokenize_seconds": tokenize_seconds,
+                "vocab_build_seconds": vocab_build_seconds,
+                "pair_prepare_seconds": pair_prepare_seconds,
+                "build_sampling_distribution_seconds": build_sampling_distribution_seconds,
+                "train_seconds": train_seconds,
+                "evaluation_seconds": evaluation_seconds,
+                "total_pipeline_seconds": total_pipeline_seconds,
+            }
         )
 
     return epoch_losses, neighbors

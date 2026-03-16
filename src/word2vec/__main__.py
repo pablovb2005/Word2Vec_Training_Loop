@@ -47,6 +47,14 @@ BENCHMARK_PROFILES: Dict[str, Dict[str, float | int | bool]] = {
         "dynamic_window": True,
         "stream_pairs": True,
     },
+    "large-stream": {
+        "embedding_dim": 64,
+        "num_negatives": 5,
+        "epochs": 4,
+        "window_size": 4,
+        "dynamic_window": True,
+        "stream_pairs": True,
+    },
 }
 
 
@@ -71,7 +79,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--benchmark-profile",
         type=str,
         default="custom",
-        choices=["custom", "tiny-fast", "tiny-medium", "medium-baseline", "medium-memory"],
+        choices=[
+            "custom",
+            "tiny-fast",
+            "tiny-medium",
+            "medium-baseline",
+            "medium-memory",
+            "large-stream",
+        ],
         help="Predefined benchmark profile that overrides selected hyperparameters.",
     )
     parser.add_argument(
@@ -179,6 +194,8 @@ def main() -> None:
     print(f"  pairs_per_second_mean: {float(summary['pairs_per_second_mean']):.2f}")
     print(f"  total_time_seconds_mean: {float(summary['total_time_seconds_mean']):.4f}")
     print(f"  peak_memory_mb_mean: {float(summary['peak_memory_mb_mean']):.2f}")
+    print(f"  train_seconds_mean: {float(summary['train_seconds_mean']):.4f}")
+    print(f"  total_pipeline_seconds_mean: {float(summary['total_pipeline_seconds_mean']):.4f}")
     print(f"  final_loss_mean: {float(summary['final_loss_mean']):.6f}")
 
     print("\nNearest neighbors:")
