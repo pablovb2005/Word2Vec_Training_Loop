@@ -1,4 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-python -m unittest discover -s tests -p "test_*.py" -v
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+if command -v python3 >/dev/null 2>&1; then
+	PYTHON_BIN="python3"
+else
+	PYTHON_BIN="python"
+fi
+
+"${PYTHON_BIN}" -m unittest discover -s tests -p "test_*.py" -v

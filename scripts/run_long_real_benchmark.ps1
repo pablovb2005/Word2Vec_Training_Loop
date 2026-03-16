@@ -1,6 +1,7 @@
 param(
     [int]$MaxMinutes = 15,
     [string]$DatasetUrl = "https://raw.githubusercontent.com/pytorch/examples/main/word_language_model/data/wikitext-103/train.txt",
+    [string]$FallbackDatasetUrl = "https://raw.githubusercontent.com/pytorch/examples/main/word_language_model/data/wikitext-2/train.txt",
     [string]$CorpusPath = "data/benchmarks/wikitext103_train.txt",
     [string]$LongCorpusPath = "data/benchmarks/wikitext103_train_long.txt",
     [int]$MaxChars = 250000
@@ -28,7 +29,12 @@ if (-not (Test-Path "artifacts")) {
 
 if (-not (Test-Path $CorpusPath)) {
     Write-Host "Downloading benchmark corpus from: $DatasetUrl"
-    Invoke-WebRequest -Uri $DatasetUrl -OutFile $CorpusPath
+    try {
+        Invoke-WebRequest -Uri $DatasetUrl -OutFile $CorpusPath
+    } catch {
+        Write-Host "Primary corpus URL failed; falling back to: $FallbackDatasetUrl"
+        Invoke-WebRequest -Uri $FallbackDatasetUrl -OutFile $CorpusPath
+    }
 }
 
 & $pythonCmd -c "from pathlib import Path; src=Path(r'$CorpusPath'); dst=Path(r'$LongCorpusPath'); text=src.read_text(encoding='utf-8'); dst.write_text(text[:$MaxChars], encoding='utf-8'); print('prepared', dst, 'bytes', dst.stat().st_size)"

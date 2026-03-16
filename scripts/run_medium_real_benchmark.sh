@@ -7,6 +7,14 @@ CORPUS_PATH="${3:-data/benchmarks/wikitext2_train.txt}"
 MEDIUM_CORPUS_PATH="${4:-data/benchmarks/wikitext2_train_medium.txt}"
 MAX_CHARS="${5:-50000}"
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+if command -v python3 >/dev/null 2>&1; then
+  PYTHON_BIN="python3"
+else
+  PYTHON_BIN="python"
+fi
+
 if [ "${MAX_MINUTES}" -lt 1 ] 2>/dev/null; then
   echo "MAX_MINUTES must be >= 1" >&2
   exit 1
@@ -17,7 +25,7 @@ mkdir -p artifacts
 
 if [ ! -f "${CORPUS_PATH}" ]; then
   echo "Downloading benchmark corpus from: ${DATASET_URL}"
-  python - <<'PY' "${DATASET_URL}" "${CORPUS_PATH}"
+  "${PYTHON_BIN}" - <<'PY' "${DATASET_URL}" "${CORPUS_PATH}"
 from pathlib import Path
 from urllib.request import urlopen
 import sys
@@ -32,7 +40,7 @@ print(f"saved {dst} bytes={dst.stat().st_size}")
 PY
 fi
 
-python - <<'PY' "${CORPUS_PATH}" "${MEDIUM_CORPUS_PATH}" "${MAX_CHARS}"
+"${PYTHON_BIN}" - <<'PY' "${CORPUS_PATH}" "${MEDIUM_CORPUS_PATH}" "${MAX_CHARS}"
 from pathlib import Path
 import sys
 
@@ -48,9 +56,9 @@ echo "Using corpus: ${MEDIUM_CORPUS_PATH}"
 SECONDS_BUDGET=$((MAX_MINUTES * 60))
 
 if command -v timeout >/dev/null 2>&1; then
-  timeout "${SECONDS_BUDGET}"s env PYTHONPATH=src python -m word2vec --corpus "${MEDIUM_CORPUS_PATH}" --benchmark-profile custom --embedding-dim 24 --num-negatives 2 --window-size 2 --stream-pairs --epochs 1 --benchmark-repeats 1 --benchmark-json artifacts/benchmark_medium_real.json --benchmark-markdown artifacts/benchmark_medium_real.md --queries "word,vectors"
+  timeout "${SECONDS_BUDGET}"s env PYTHONPATH=src "${PYTHON_BIN}" -m word2vec --corpus "${MEDIUM_CORPUS_PATH}" --benchmark-profile custom --embedding-dim 24 --num-negatives 2 --window-size 2 --stream-pairs --epochs 1 --benchmark-repeats 1 --benchmark-json artifacts/benchmark_medium_real.json --benchmark-markdown artifacts/benchmark_medium_real.md --queries "word,vectors"
 else
-  env PYTHONPATH=src python -m word2vec --corpus "${MEDIUM_CORPUS_PATH}" --benchmark-profile custom --embedding-dim 24 --num-negatives 2 --window-size 2 --stream-pairs --epochs 1 --benchmark-repeats 1 --benchmark-json artifacts/benchmark_medium_real.json --benchmark-markdown artifacts/benchmark_medium_real.md --queries "word,vectors"
+  env PYTHONPATH=src "${PYTHON_BIN}" -m word2vec --corpus "${MEDIUM_CORPUS_PATH}" --benchmark-profile custom --embedding-dim 24 --num-negatives 2 --window-size 2 --stream-pairs --epochs 1 --benchmark-repeats 1 --benchmark-json artifacts/benchmark_medium_real.json --benchmark-markdown artifacts/benchmark_medium_real.md --queries "word,vectors"
 fi
 
 echo "Artifacts: artifacts/benchmark_medium_real.json, artifacts/benchmark_medium_real.md"

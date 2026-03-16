@@ -26,6 +26,9 @@ Long (WikiText-103 subset, runtime-capped):
 ./scripts/run_long_real_benchmark.ps1 -MaxMinutes 15
 ```
 
+If the primary WikiText-103 URL is unavailable, the long script automatically
+falls back to a secondary public corpus URL so the command remains runnable.
+
 Benchmark artifacts:
 - JSON summary per run
 - Markdown summary per run

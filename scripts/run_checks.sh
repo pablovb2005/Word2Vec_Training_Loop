@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-python -m ruff check src tests
-python -m pyright
-python -m unittest discover -s tests -p "test_*.py" -v
-python -m coverage run -m unittest discover -s tests -p "test_*.py" -v
-python -m coverage report -m
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+if command -v python3 >/dev/null 2>&1; then
+	PYTHON_BIN="python3"
+else
+	PYTHON_BIN="python"
+fi
+
+"${PYTHON_BIN}" -m ruff check src tests
+"${PYTHON_BIN}" -m pyright
+"${PYTHON_BIN}" -m unittest discover -s tests -p "test_*.py" -v
+"${PYTHON_BIN}" -m coverage run -m unittest discover -s tests -p "test_*.py" -v
+"${PYTHON_BIN}" -m coverage report -m
