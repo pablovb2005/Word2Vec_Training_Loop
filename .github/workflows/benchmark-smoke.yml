@@ -1,0 +1,58 @@
+name: benchmark-smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .[dev]
+
+      - name: Run benchmark smoke
+        run: |
+          PYTHONPATH=src python -m word2vec --benchmark-profile tiny-fast --benchmark-repeats 1 --benchmark-json artifacts/benchmark_ci_smoke.json --benchmark-markdown artifacts/benchmark_ci_smoke.md --queries "word,vectors"
+
+      - name: Validate benchmark artifact shape
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("artifacts/benchmark_ci_smoke.json")
+          payload = json.loads(path.read_text(encoding="utf-8"))
+          summary = payload["summary"]
+
+          required = [
+              "pairs_per_second_mean",
+              "peak_memory_mb_mean",
+              "train_seconds_mean",
+              "total_pipeline_seconds_mean",
+              "final_loss_mean",
+          ]
+          missing = [k for k in required if k not in summary]
+          if missing:
+              raise SystemExit(f"Missing benchmark summary fields: {missing}")
+          if float(summary["pairs_per_second_mean"]) <= 0.0:
+              raise SystemExit("pairs_per_second_mean must be > 0")
+          PY
+
+      - name: Upload benchmark artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-smoke-artifacts
+          path: artifacts/benchmark_ci_smoke.*
