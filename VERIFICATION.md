@@ -174,6 +174,8 @@ Unix-like shell:
 Expected outputs:
 - `artifacts/benchmark_medium_real.json`
 - `artifacts/benchmark_medium_real.md`
+- `artifacts/models/custom_wikitext2_train_medium.npz`
+- `artifacts/models/custom_wikitext2_train_medium.json`
 
 ### Long real benchmark run (explicit timeout budget)
 
@@ -192,6 +194,31 @@ Unix-like shell:
 Expected outputs:
 - `artifacts/benchmark_long_real.json`
 - `artifacts/benchmark_long_real.md`
+- `artifacts/models/custom_wikitext103_train_long.npz`
+- `artifacts/models/custom_wikitext103_train_long.json`
+
+### Default model persistence behavior
+
+CLI runs now save model artifacts by default unless explicitly disabled.
+
+Default command:
+
+```bash
+PYTHONPATH=src python -m word2vec
+```
+
+Expected default outputs:
+- `artifacts/models/custom_tiny_corpus.npz`
+- `artifacts/models/custom_tiny_corpus.json`
+
+Opt-out command:
+
+```bash
+PYTHONPATH=src python -m word2vec --no-save-artifact
+```
+
+Expected behavior:
+- no model artifact is written for this run.
 
 ### One-command interview demo
 

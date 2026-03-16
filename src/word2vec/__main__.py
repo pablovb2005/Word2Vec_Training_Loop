@@ -107,11 +107,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional output path for benchmark markdown summary.",
     )
-    parser.add_argument(
+    artifact_group = parser.add_mutually_exclusive_group()
+    artifact_group.add_argument(
         "--save-artifact",
         type=Path,
         default=None,
         help="Optional .npz path to save learned embeddings and metadata.",
+    )
+    artifact_group.add_argument(
+        "--no-save-artifact",
+        action="store_true",
+        help="Disable model artifact persistence for this run.",
     )
     parser.add_argument(
         "--log-level",
@@ -137,6 +143,31 @@ def _apply_profile(args: argparse.Namespace) -> argparse.Namespace:
     return args
 
 
+def _sanitize_component(raw_value: str) -> str:
+    """Convert a free-form value into a stable filename-safe token."""
+    replaced = "".join(ch.lower() if ch.isalnum() else "_" for ch in raw_value)
+    collapsed = "_".join(part for part in replaced.split("_") if part)
+    return collapsed or "unknown"
+
+
+def _default_artifact_path(corpus_path: Path, benchmark_profile: str) -> Path:
+    """Build the default artifact output path for a training run."""
+    artifact_name = (
+        f"{_sanitize_component(benchmark_profile)}_"
+        f"{_sanitize_component(corpus_path.stem)}.npz"
+    )
+    return Path("artifacts") / "models" / artifact_name
+
+
+def _resolve_save_artifact_path(args: argparse.Namespace) -> Path | None:
+    """Resolve the effective model artifact path after CLI argument parsing."""
+    if args.no_save_artifact:
+        return None
+    if args.save_artifact is not None:
+        return args.save_artifact
+    return _default_artifact_path(args.corpus, args.benchmark_profile)
+
+
 def main() -> None:
     """Run demo training with CLI arguments and print summary outputs."""
     args = build_parser().parse_args()
@@ -148,6 +179,7 @@ def main() -> None:
         raise ValueError("benchmark-repeats must be >= 1")
 
     args = _apply_profile(args)
+    save_artifact_path = _resolve_save_artifact_path(args)
     queries = [q.strip() for q in args.queries.split(",") if q.strip()]
 
     run_metrics: List[Dict[str, float | int | str]] = []
@@ -167,7 +199,7 @@ def main() -> None:
             seed=args.seed + run_index,
             query_words=queries,
             top_k=args.top_k,
-            save_artifact_path=args.save_artifact,
+            save_artifact_path=save_artifact_path,
             benchmark_profile=args.benchmark_profile,
             benchmark_metrics_out=metrics,
             stream_pairs=args.stream_pairs,
@@ -197,6 +229,9 @@ def main() -> None:
     print(f"  train_seconds_mean: {float(summary['train_seconds_mean']):.4f}")
     print(f"  total_pipeline_seconds_mean: {float(summary['total_pipeline_seconds_mean']):.4f}")
     print(f"  final_loss_mean: {float(summary['final_loss_mean']):.6f}")
+
+    if save_artifact_path is not None:
+        print(f"  saved_model_artifact: {save_artifact_path}")
 
     print("\nNearest neighbors:")
     for query, results in neighbors:
