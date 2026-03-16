@@ -55,3 +55,4 @@ else
 fi
 
 echo "Artifacts: artifacts/benchmark_long_real.json, artifacts/benchmark_long_real.md"
+echo "Model: artifacts/models/custom_wikitext103_train_long.npz"

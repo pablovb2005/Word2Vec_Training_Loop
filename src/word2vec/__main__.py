@@ -6,7 +6,7 @@ import argparse
 import logging
 import tracemalloc
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from .benchmark import (
     summarize_benchmark_runs,
@@ -168,54 +168,55 @@ def _resolve_save_artifact_path(args: argparse.Namespace) -> Path | None:
     return _default_artifact_path(args.corpus, args.benchmark_profile)
 
 
-def main() -> None:
-    """Run demo training with CLI arguments and print summary outputs."""
-    args = build_parser().parse_args()
-    logging.basicConfig(
-        level=getattr(logging, args.log_level),
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-    )
+def _validate_runtime_args(args: argparse.Namespace) -> None:
+    """Validate runtime arguments before starting training."""
     if args.benchmark_repeats < 1:
         raise ValueError("benchmark-repeats must be >= 1")
+    if not args.corpus.exists():
+        raise FileNotFoundError(f"corpus file not found: {args.corpus}")
 
-    args = _apply_profile(args)
-    save_artifact_path = _resolve_save_artifact_path(args)
-    queries = [q.strip() for q in args.queries.split(",") if q.strip()]
 
-    run_metrics: List[Dict[str, float | int | str]] = []
-    epoch_losses = []
-    neighbors = []
-    for run_index in range(args.benchmark_repeats):
-        metrics: Dict[str, float | int | str] = {}
-        tracemalloc.start()
-        epoch_losses, neighbors = run_demo(
-            corpus_path=args.corpus,
-            embedding_dim=args.embedding_dim,
-            window_size=args.window_size,
-            dynamic_window=args.dynamic_window,
-            num_negatives=args.num_negatives,
-            learning_rate=args.learning_rate,
-            epochs=args.epochs,
-            seed=args.seed + run_index,
-            query_words=queries,
-            top_k=args.top_k,
-            save_artifact_path=save_artifact_path,
-            benchmark_profile=args.benchmark_profile,
-            benchmark_metrics_out=metrics,
-            stream_pairs=args.stream_pairs,
-        )
-        _, peak_bytes = tracemalloc.get_traced_memory()
-        tracemalloc.stop()
-        metrics["peak_memory_mb"] = peak_bytes / (1024.0 * 1024.0)
-        run_metrics.append(metrics)
+def _run_single_benchmark(
+    args: argparse.Namespace,
+    queries: List[str],
+    run_index: int,
+) -> Tuple[
+    List[float],
+    List[Tuple[str, List[Tuple[str, float]]]],
+    Dict[str, float | int | str],
+]:
+    """Run one training/evaluation pass and collect metrics."""
+    metrics: Dict[str, float | int | str] = {}
+    tracemalloc.start()
+    epoch_losses, neighbors = run_demo(
+        corpus_path=args.corpus,
+        embedding_dim=args.embedding_dim,
+        window_size=args.window_size,
+        dynamic_window=args.dynamic_window,
+        num_negatives=args.num_negatives,
+        learning_rate=args.learning_rate,
+        epochs=args.epochs,
+        seed=args.seed + run_index,
+        query_words=queries,
+        top_k=args.top_k,
+        save_artifact_path=args.save_artifact,
+        benchmark_profile=args.benchmark_profile,
+        benchmark_metrics_out=metrics,
+        stream_pairs=args.stream_pairs,
+    )
+    _, peak_bytes = tracemalloc.get_traced_memory()
+    tracemalloc.stop()
+    metrics["peak_memory_mb"] = peak_bytes / (1024.0 * 1024.0)
+    return epoch_losses, neighbors, metrics
 
-    summary = summarize_benchmark_runs(run_metrics)
 
-    if args.benchmark_json is not None:
-        write_benchmark_json(args.benchmark_json, {"runs": run_metrics, "summary": summary})
-    if args.benchmark_markdown is not None:
-        write_benchmark_markdown(args.benchmark_markdown, summary)
-
+def _print_summary(
+    epoch_losses: List[float],
+    summary: Dict[str, float | int | str],
+    neighbors: List[Tuple[str, List[Tuple[str, float]]]],
+    save_artifact_path: Path | None,
+) -> None:
+    """Render human-readable CLI output after all runs complete."""
     print("Epoch losses:")
     for epoch, loss in enumerate(epoch_losses, start=1):
         print(f"  epoch {epoch:02d}: {loss:.4f}")
@@ -237,6 +238,35 @@ def main() -> None:
     for query, results in neighbors:
         formatted = ", ".join([f"{token} ({score:.3f})" for token, score in results])
         print(f"  {query}: {formatted}")
+
+
+def main() -> None:
+    """Run demo training with CLI arguments and print summary outputs."""
+    args = build_parser().parse_args()
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    _validate_runtime_args(args)
+
+    args = _apply_profile(args)
+    args.save_artifact = _resolve_save_artifact_path(args)
+    queries = [q.strip() for q in args.queries.split(",") if q.strip()]
+
+    run_metrics: List[Dict[str, float | int | str]] = []
+    epoch_losses = []
+    neighbors = []
+    for run_index in range(args.benchmark_repeats):
+        epoch_losses, neighbors, metrics = _run_single_benchmark(args, queries, run_index)
+        run_metrics.append(metrics)
+
+    summary = summarize_benchmark_runs(run_metrics)
+
+    if args.benchmark_json is not None:
+        write_benchmark_json(args.benchmark_json, {"runs": run_metrics, "summary": summary})
+    if args.benchmark_markdown is not None:
+        write_benchmark_markdown(args.benchmark_markdown, summary)
+    _print_summary(epoch_losses, summary, neighbors, args.save_artifact)
 
 
 if __name__ == "__main__":

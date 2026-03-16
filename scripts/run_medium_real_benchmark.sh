@@ -54,3 +54,4 @@ else
 fi
 
 echo "Artifacts: artifacts/benchmark_medium_real.json, artifacts/benchmark_medium_real.md"
+echo "Model: artifacts/models/custom_wikitext2_train_medium.npz"
