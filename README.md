@@ -95,6 +95,24 @@ The saved artifact includes:
 - `artifacts/tiny_embeddings.npz`: dense embedding matrix
 - `artifacts/tiny_embeddings.json`: token mapping and training metadata
 
+Run benchmark profile with summary artifacts:
+
+```bash
+PYTHONPATH=src python -m word2vec --benchmark-profile tiny-fast --benchmark-repeats 3 --benchmark-json artifacts/benchmark_tiny_fast.json --benchmark-markdown artifacts/benchmark_tiny_fast.md
+```
+
+Benchmark helper scripts:
+
+```bash
+./scripts/run_benchmarks.sh
+```
+
+PowerShell:
+
+```powershell
+./scripts/run_benchmarks.ps1
+```
+
 Scripts are also provided in the scripts/ directory:
 
 ```bash
@@ -185,3 +203,20 @@ Run with custom arguments:
 ```bash
 docker run --rm numpy-word2vec --epochs 10 --log-level INFO --save-artifact /app/artifacts/tiny_embeddings.npz
 ```
+
+## Benchmark Metrics Contract
+
+Each benchmark run records:
+- `benchmark_profile`
+- `vocab_size`
+- `embedding_dim`
+- `num_negatives`
+- `epochs`
+- `total_pairs`
+- `total_time_seconds`
+- `mean_epoch_time_seconds`
+- `pairs_per_second`
+- `final_loss`
+
+For repeated runs, the CLI also emits summary mean and standard deviation values
+for timing, throughput, and final loss.
